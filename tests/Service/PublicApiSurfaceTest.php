@@ -5,11 +5,12 @@ declare(strict_types=1);
 namespace Orqex\Orchestrate\Tests\Service;
 
 use Orqex\Orchestrate\Enum\PaymentMethodStatus;
+use Orqex\Orchestrate\Enum\RefundType;
 use Orqex\Orchestrate\Resource\Collection;
 use Orqex\Orchestrate\Resource\GatewayInspection;
 use Orqex\Orchestrate\Resource\MethodStatus;
 use Orqex\Orchestrate\Resource\Payout;
-use Orqex\Orchestrate\Resource\RefundsSummary;
+use Orqex\Orchestrate\Resource\RefundAvailability;
 use Orqex\Orchestrate\Resource\Requery;
 use Orqex\Orchestrate\Tests\Support\FakeApi;
 use PHPUnit\Framework\TestCase;
@@ -119,25 +120,69 @@ final class PublicApiSurfaceTest extends TestCase
         $this->assertSame(300, $status->lastResponse()?->json['meta']['ttl_seconds']);
     }
 
-    public function test_a_payment_intent_carries_its_refunds_summary(): void
+    public function test_refund_availability_reports_the_position_and_the_allowed_types(): void
     {
         $api = new FakeApi([FakeApi::json(['data' => [
-            'id'              => 'pi_1',
-            'status'          => 'partially_refunded',
-            'refunds_summary' => [
-                'refunded_amount'    => ['value' => 19.5, 'currency' => 'EUR'],
-                'pending_amount'     => ['value' => 0.0, 'currency' => 'EUR'],
-                'refundable_amount'  => ['value' => 30.5, 'currency' => 'EUR'],
-                'has_pending_refund' => false,
-            ],
+            'is_refundable'      => true,
+            'refunded_amount'    => ['value' => 19.5, 'currency' => 'EUR'],
+            'pending_amount'     => ['value' => 0.0, 'currency' => 'EUR'],
+            'refundable_amount'  => ['value' => 30.5, 'currency' => 'EUR'],
+            'has_pending_refund' => false,
+            'available_types'    => ['full', 'partial'],
+            'execution_method'   => 'gateway',
+            'unavailable_reason' => null,
         ]])]);
 
-        $intent = $api->client->paymentIntents()->retrieve('pi_1');
+        $availability = $api->client->refunds()->availability('pi_1');
 
-        $this->assertInstanceOf(RefundsSummary::class, $intent->refunds_summary);
-        $this->assertSame(30.5, $intent->refunds_summary->refundable_amount->value);
-        $this->assertSame(19.5, $intent->refunds_summary->refunded_amount->value);
-        $this->assertSame('EUR', $intent->refunds_summary->refundable_amount->currency);
-        $this->assertFalse($intent->refunds_summary->has_pending_refund);
+        $this->assertInstanceOf(RefundAvailability::class, $availability);
+        $this->assertTrue($availability->is_refundable);
+        $this->assertSame(30.5, $availability->refundable_amount->value);
+        $this->assertSame(19.5, $availability->refunded_amount->value);
+        $this->assertSame('EUR', $availability->refundable_amount->currency);
+        $this->assertFalse($availability->has_pending_refund);
+        $this->assertTrue($availability->allows(RefundType::FULL));
+        $this->assertTrue($availability->allows(RefundType::PARTIAL));
+        $this->assertSame('/v1/payment/intents/pi_1/refunds/availability', $api->lastRequest()->getUri()->getPath());
+    }
+
+    public function test_refund_availability_withholds_a_partial_the_currency_cannot_express(): void
+    {
+        $api = new FakeApi([FakeApi::json(['data' => [
+            'is_refundable'      => true,
+            'refunded_amount'    => ['value' => 0.0, 'currency' => 'USD'],
+            'pending_amount'     => ['value' => 0.0, 'currency' => 'USD'],
+            'refundable_amount'  => ['value' => 1.0, 'currency' => 'USD'],
+            'has_pending_refund' => false,
+            'available_types'    => ['full'],
+            'execution_method'   => 'gateway',
+            'unavailable_reason' => null,
+        ]])]);
+
+        $availability = $api->client->refunds()->availability('pi_1');
+
+        $this->assertTrue($availability->allows(RefundType::FULL));
+        $this->assertFalse($availability->allows(RefundType::PARTIAL));
+    }
+
+    public function test_an_unrefundable_payment_carries_a_reason(): void
+    {
+        $api = new FakeApi([FakeApi::json(['data' => [
+            'is_refundable'      => false,
+            'refunded_amount'    => ['value' => 50.0, 'currency' => 'USD'],
+            'pending_amount'     => ['value' => 0.0, 'currency' => 'USD'],
+            'refundable_amount'  => ['value' => 0.0, 'currency' => 'USD'],
+            'has_pending_refund' => false,
+            'available_types'    => [],
+            'execution_method'   => null,
+            'unavailable_reason' => 'This payment has no refundable balance left.',
+        ]])]);
+
+        $availability = $api->client->refunds()->availability('pi_1');
+
+        $this->assertFalse($availability->is_refundable);
+        $this->assertNull($availability->execution_method);
+        $this->assertFalse($availability->allows(RefundType::FULL));
+        $this->assertNotNull($availability->unavailable_reason);
     }
 }
