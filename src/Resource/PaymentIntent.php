@@ -19,7 +19,6 @@ use Orqex\Orchestrate\Enum\PaymentIntentStatus;
  * @property null|string $statement_descriptor
  * @property null|string $receipt_email
  * @property array<string,mixed> $metadata
- * @property null|RefundsSummary $refunds_summary Refund position of this payment.
  * @property null|PaymentAttempt $active_attempt
  * @property null|string $completed_at
  * @property null|string $expired_at When the payment was sealed as expired. A payment only expires when it was never attempted.
@@ -30,10 +29,9 @@ final class PaymentIntent extends BaseResource
     protected static function casts(): array
     {
         return [
-            'amount'          => Amount::class,
-            'customer'        => Customer::class,
-            'active_attempt'  => PaymentAttempt::class,
-            'refunds_summary' => RefundsSummary::class,
+            'amount'         => Amount::class,
+            'customer'       => Customer::class,
+            'active_attempt' => PaymentAttempt::class,
         ];
     }
 }
