@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace Orqex\Orchestrate\Tests\Service;
 
+use Orqex\Orchestrate\Resource\Amount;
 use Orqex\Orchestrate\Resource\Country;
 use Orqex\Orchestrate\Resource\Customer;
+use Orqex\Orchestrate\Resource\ExchangeRateDetails;
 use Orqex\Orchestrate\Resource\Failure;
 use Orqex\Orchestrate\Resource\FailureCode;
 use Orqex\Orchestrate\Resource\Payout;
@@ -22,7 +24,7 @@ final class PayoutServiceTest extends TestCase
         $api = new FakeApi([FakeApi::json(['data' => self::payoutFixture()], 201)]);
 
         $payout = $api->client->payouts()->create([
-            'amount'      => 5000,
+            'amount'      => 50,
             'currency'    => 'USD',
             'method'      => 'test',
             'description' => 'Payout to driver',
@@ -82,6 +84,20 @@ final class PayoutServiceTest extends TestCase
         $this->assertSame('ext_abc123', $payout->gateway['transaction']['external_id']);
     }
 
+    public function test_payout_hydrates_settlement_rate_and_fee(): void
+    {
+        $api = new FakeApi([FakeApi::json(['data' => self::payoutFixture()])]);
+
+        $payout = $api->client->payouts()->retrieve('po_1');
+
+        $this->assertInstanceOf(Amount::class, $payout->settlement_amount);
+        $this->assertSame(46, $payout->settlement_amount->value);
+        $this->assertInstanceOf(ExchangeRateDetails::class, $payout->exchange_rate);
+        $this->assertSame('0.92000000', $payout->exchange_rate->value);
+        $this->assertInstanceOf(Amount::class, $payout->fee_amount);
+        $this->assertSame(0.5, $payout->fee_amount->value);
+    }
+
     public function test_payout_hydrates_failure(): void
     {
         $fixture = self::payoutFixture();
@@ -114,7 +130,7 @@ final class PayoutServiceTest extends TestCase
         $api = new FakeApi([FakeApi::json(['data' => self::payoutFixture()], 201)]);
 
         $api->client->payouts()->create([
-            'amount'     => 5000,
+            'amount'     => 50,
             'currency'   => 'USD',
             'method'     => 'test',
             'instrument' => ['type' => 'phone', 'phone_number' => '+15550000000', 'country' => 'US'],
@@ -144,16 +160,25 @@ final class PayoutServiceTest extends TestCase
                 'execution_method' => 'payout',
                 'status'           => 'processing',
                 'payout'           => [
-                    'id'           => 'po_9',
-                    'gateway_code' => 'test',
-                    'method'       => 'test',
-                    'recipient'    => [
+                    'id'                => 'po_9',
+                    'amount'            => ['value' => 50, 'currency' => 'USD'],
+                    'settlement_amount' => ['value' => 46, 'currency' => 'EUR'],
+                    'exchange_rate'     => [
+                        'value'         => '0.92000000',
+                        'from_currency' => 'USD',
+                        'to_currency'   => 'EUR',
+                        'expression'    => '$1.00 ≈ €0.92',
+                    ],
+                    'gateway_code'      => 'test',
+                    'method'            => 'test',
+                    'recipient'         => [
                         'id'           => 'ins_9',
                         'type'         => 'phone',
                         'phone_number' => '+15550000001',
                         'country'      => ['code' => 'DE', 'name' => 'Benin', 'flag' => null],
                     ],
-                    'status'       => 'pending',
+                    'fee_amount'        => ['value' => 0.5, 'currency' => 'EUR'],
+                    'status'            => 'pending',
                 ],
             ],
         ], 201)]);
@@ -165,6 +190,10 @@ final class PayoutServiceTest extends TestCase
         $this->assertInstanceOf(RefundPayout::class, $refund->payout);
         $this->assertSame('po_9', $refund->payout->id);
         $this->assertSame('test', $refund->payout->gateway_code);
+        $this->assertInstanceOf(Amount::class, $refund->payout->amount);
+        $this->assertInstanceOf(Amount::class, $refund->payout->settlement_amount);
+        $this->assertInstanceOf(ExchangeRateDetails::class, $refund->payout->exchange_rate);
+        $this->assertInstanceOf(Amount::class, $refund->payout->fee_amount);
         $this->assertInstanceOf(PayoutInstrument::class, $refund->payout->recipient);
         $this->assertSame('ins_9', $refund->payout->recipient->id);
         $this->assertSame('phone', $refund->payout->recipient->type);
@@ -176,39 +205,46 @@ final class PayoutServiceTest extends TestCase
     private static function payoutFixture(): array
     {
         return [
-            'id'          => 'po_1',
-            'amount'      => ['value' => 5000, 'currency' => 'USD'],
-            'method'      => 'test',
-            'status'      => 'pending',
-            'reference'   => 'payout-ref-001',
-            'description' => 'Payout to driver',
-            'customer'    => [
+            'id'                => 'po_1',
+            'amount'            => ['value' => 50, 'currency' => 'USD'],
+            'settlement_amount' => ['value' => 46, 'currency' => 'EUR'],
+            'exchange_rate'     => [
+                'value'         => '0.92000000',
+                'from_currency' => 'USD',
+                'to_currency'   => 'EUR',
+                'expression'    => '$1.00 ≈ €0.92',
+            ],
+            'method'            => 'test',
+            'status'            => 'pending',
+            'reference'         => 'payout-ref-001',
+            'description'       => 'Payout to driver',
+            'customer'          => [
                 'id'         => 'cus_1',
                 'first_name' => 'Kwame',
                 'last_name'  => 'Mensah',
                 'email'      => 'kwame@example.com',
                 'avatar_url' => null,
             ],
-            'instrument'  => [
+            'instrument'        => [
                 'id'           => 'ins_1',
                 'type'         => 'phone',
                 'phone_number' => '+15550000000',
                 'country'      => ['code' => 'US', 'name' => "Cote d'Ivoire", 'flag' => null],
             ],
-            'gateway'     => [
+            'gateway'           => [
                 'transaction' => [
                     'id'          => 'gw_txn_1',
                     'reference'   => 'REF001',
                     'external_id' => 'ext_abc123',
                 ],
             ],
-            'fee_amount'   => 50,
-            'failure'      => null,
-            'metadata'     => [],
-            'initiated_at' => '2026-06-13T10:00:00Z',
-            'completed_at' => null,
-            'failed_at'    => null,
-            'created_at'   => '2026-06-13T09:59:00Z',
+            'fee_amount'        => ['value' => 0.5, 'currency' => 'EUR'],
+            'failure'           => null,
+            'metadata'          => [],
+            'initiated_at'      => '2026-06-13T10:00:00Z',
+            'completed_at'      => null,
+            'failed_at'         => null,
+            'created_at'        => '2026-06-13T09:59:00Z',
         ];
     }
 }

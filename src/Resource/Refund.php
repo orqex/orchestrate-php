@@ -14,6 +14,8 @@ use Orqex\Orchestrate\Enum\RefundType;
  *
  * @property string $id
  * @property Amount $amount
+ * @property null|Amount $processed_amount Amount sent to the payment gateway.
+ * @property null|ExchangeRateDetails $exchange_rate Effective conversion applied to the refund.
  * @property null|string $type See {@see RefundType}.
  * @property null|string $execution_method See {@see RefundExecutionMethod}.
  * @property null|string $status See {@see RefundStatus}.
@@ -32,8 +34,10 @@ final class Refund extends BaseResource
     protected static function casts(): array
     {
         return [
-            'amount' => Amount::class,
-            'payout' => RefundPayout::class,
+            'amount'           => Amount::class,
+            'processed_amount' => Amount::class,
+            'exchange_rate'    => ExchangeRateDetails::class,
+            'payout'           => RefundPayout::class,
         ];
     }
 }

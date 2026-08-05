@@ -86,8 +86,8 @@ log line that prints the raw key — use `maskedApiKey()`.
 - **Never invent enum values, field names, paths or response shapes.** Everything must mirror the Orqex backend (`orqex/orchestrate-api`, `app/Http/Controllers/PublicApi/V1/`, `app/Http/Resources/PublicApi/`, `app/Enums/Payment/`). When adding endpoints, read the controller, its FormRequest and its API Resource first.
 - **Every change is tested.** Add or update a test (Guzzle `MockHandler` via `tests/Support/FakeApi`), then run the affected tests.
 - **Keep `Collection` invariant-generic.** It is a pure value object; the page fetcher is a bare `\Closure` to avoid generic-variance issues.
-- Amounts are in **major units** on every write, payouts included. `fee_amount` on a payout
-  is the exception: a plain integer in minor units.
+- Amounts are in **major units** on every write, payouts included. Every amount returned by
+  the API, including payout fees and settlement amounts, is an `Amount` resource.
 - No endpoint returns 501 today. `NotImplementedException` stays mapped so a future one
   surfaces as a typed exception.
 

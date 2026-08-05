@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace Orqex\Orchestrate\Tests\Service;
 
 use Orqex\Orchestrate\Enum\RefundReason;
+use Orqex\Orchestrate\Resource\Amount;
 use Orqex\Orchestrate\Resource\Currency;
 use Orqex\Orchestrate\Resource\ExchangeRate;
+use Orqex\Orchestrate\Resource\ExchangeRateDetails;
 use Orqex\Orchestrate\Resource\Refund;
 use Orqex\Orchestrate\Tests\Support\FakeApi;
 use PHPUnit\Framework\TestCase;
@@ -17,23 +19,34 @@ final class RefundAndExchangeRateServiceTest extends TestCase
     {
         $api = new FakeApi([FakeApi::json([
             'data' => [
-                'id'     => 're_1',
-                'amount' => ['value' => 5000, 'currency' => 'USD'],
-                'status' => 'pending',
-                'reason' => ['value' => 'duplicate', 'label' => 'Duplicate payment'],
-                'note'   => 'Charged twice',
+                'id'               => 're_1',
+                'amount'           => ['value' => 50, 'currency' => 'USD'],
+                'processed_amount' => ['value' => 46, 'currency' => 'EUR'],
+                'exchange_rate'    => [
+                    'value'         => '0.92000000',
+                    'from_currency' => 'USD',
+                    'to_currency'   => 'EUR',
+                    'expression'    => '$1.00 ≈ €0.92',
+                ],
+                'status'           => 'pending',
+                'reason'           => ['value' => 'duplicate', 'label' => 'Duplicate payment'],
+                'note'             => 'Charged twice',
             ],
         ], 201)]);
 
         $refund = $api->client->refunds()->create('TRX1', [
-            'amount' => 5000,
+            'amount' => 50,
             'reason' => RefundReason::DUPLICATE->value,
             'note'   => 'Charged twice',
         ]);
 
         $this->assertInstanceOf(Refund::class, $refund);
         $this->assertSame('re_1', $refund->id);
-        $this->assertSame(5000, $refund->amount->value);
+        $this->assertSame(50, $refund->amount->value);
+        $this->assertInstanceOf(Amount::class, $refund->processed_amount);
+        $this->assertSame(46, $refund->processed_amount->value);
+        $this->assertInstanceOf(ExchangeRateDetails::class, $refund->exchange_rate);
+        $this->assertSame('0.92000000', $refund->exchange_rate->value);
         $this->assertSame('duplicate', $refund->reason['value']);
         $this->assertSame('Duplicate payment', $refund->reason['label']);
         $this->assertSame('Charged twice', $refund->note);
