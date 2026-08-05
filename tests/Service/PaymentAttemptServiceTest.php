@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Orqex\Orchestrate\Tests\Service;
 
+use Orqex\Orchestrate\Resource\ExchangeRateDetails;
 use Orqex\Orchestrate\Resource\Failover;
 use Orqex\Orchestrate\Resource\Failure;
 use Orqex\Orchestrate\Resource\FailureCode;
@@ -68,6 +69,29 @@ final class PaymentAttemptServiceTest extends TestCase
 
         $this->assertSame('GET', $api->lastRequest()->getMethod());
         $this->assertSame('/v1/payment/intents/TRX1/attempts/pa_1', $api->lastRequest()->getUri()->getPath());
+    }
+
+    public function test_exchange_rate_is_hydrated_as_details(): void
+    {
+        $api = new FakeApi([FakeApi::json([
+            'data' => [
+                'id'            => 'pa_1',
+                'exchange_rate' => [
+                    'value'         => '0.92000000',
+                    'from_currency' => 'USD',
+                    'to_currency'   => 'EUR',
+                    'expression'    => '$1.00 ≈ €0.92',
+                ],
+            ],
+        ])]);
+
+        $attempt = $api->client->attempts()->retrieve('TRX1', 'pa_1');
+
+        $this->assertInstanceOf(ExchangeRateDetails::class, $attempt->exchange_rate);
+        $this->assertSame('0.92000000', $attempt->exchange_rate->value);
+        $this->assertSame('USD', $attempt->exchange_rate->from_currency);
+        $this->assertSame('EUR', $attempt->exchange_rate->to_currency);
+        $this->assertSame('$1.00 ≈ €0.92', $attempt->exchange_rate->expression);
     }
 
     public function test_failure_code_is_hydrated_as_object(): void

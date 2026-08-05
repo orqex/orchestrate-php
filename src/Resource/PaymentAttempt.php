@@ -12,7 +12,7 @@ use Orqex\Orchestrate\Enum\PaymentAttemptStatus;
  * @property string $id
  * @property null|PaymentMethod $method
  * @property Amount $amount
- * @property null|float $exchange_rate
+ * @property null|ExchangeRateDetails $exchange_rate Effective conversion applied to the attempt.
  * @property null|float $correction_rate
  * @property string $status See {@see PaymentAttemptStatus}.
  * @property array<string,mixed> $gateway Gateway transaction details.
@@ -31,11 +31,12 @@ final class PaymentAttempt extends BaseResource
     protected static function casts(): array
     {
         return [
-            'method'      => PaymentMethod::class,
-            'amount'      => Amount::class,
-            'next_action' => NextAction::class,
-            'failure'     => Failure::class,
-            'failover'    => Failover::class,
+            'method'        => PaymentMethod::class,
+            'amount'        => Amount::class,
+            'exchange_rate' => ExchangeRateDetails::class,
+            'next_action'   => NextAction::class,
+            'failure'       => Failure::class,
+            'failover'      => Failover::class,
         ];
     }
 }
