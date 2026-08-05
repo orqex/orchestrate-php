@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 While the SDK is on the `0.x` line, a breaking change bumps the minor version.
 
+## [0.2.0](https://github.com/orqex/orchestrate-php/compare/v0.1.1...v0.2.0) (2026-08-05)
+
+
+### Features
+
+* **refunds:** add refund availability and drop the intent summary ([#3](https://github.com/orqex/orchestrate-php/issues/3)) ([96cbdbb](https://github.com/orqex/orchestrate-php/commit/96cbdbbc131aeab667c6a3e76ae39ce8d2689dea))
+* **resources:** hydrate money and exchange rate objects ([#1](https://github.com/orqex/orchestrate-php/issues/1)) ([770bbd2](https://github.com/orqex/orchestrate-php/commit/770bbd24b6baf5657a4d98859630d03ecf65cb5b))
+
 ## [0.1.1](https://github.com/orqex/orchestrate-php/compare/v0.1.0...v0.1.1) (2026-08-05)
 
 
