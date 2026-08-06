@@ -6,6 +6,7 @@ namespace Orqex\Orchestrate\Tests\Laravel;
 
 use Illuminate\Foundation\Application;
 use Orchestra\Testbench\TestCase;
+use Orqex\Orchestrate\Exception\InvalidArgumentException;
 use Orqex\Orchestrate\Laravel\Facades\Orchestrate;
 use Orqex\Orchestrate\Laravel\OrchestrateServiceProvider;
 use Orqex\Orchestrate\OrchestrateClient;
@@ -31,6 +32,18 @@ final class ServiceProviderTest extends TestCase
     {
         $this->assertArrayHasKey('orchestrate', $this->app['config']->all());
         $this->assertSame('https://api.orqex.com/v1', $this->app['config']->get('orchestrate.base_uri'));
+        $this->assertNull($this->app['config']->get('orchestrate.network.resolve_ip'));
+        $this->assertNull($this->app['config']->get('orchestrate.network.ca_bundle'));
+    }
+
+    public function test_network_configuration_is_forwarded_to_the_client(): void
+    {
+        $this->app['config']->set('orchestrate.network.resolve_ip', 'invalid-address');
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('valid IP address');
+
+        $this->app->make(OrchestrateClient::class);
     }
 
     /**

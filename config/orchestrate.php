@@ -35,4 +35,19 @@ return [
     'connect_timeout' => (float) env('ORCHESTRATE_CONNECT_TIMEOUT', 10),
 
     'max_retries' => (int) env('ORCHESTRATE_MAX_RETRIES', 2),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Custom network routing
+    |--------------------------------------------------------------------------
+    |
+    | Optionally resolve the API hostname to a specific IP without changing
+    | the request URL, Host header or TLS SNI. Supply a readable CA bundle
+    | when the destination uses a private certificate authority.
+    |
+    */
+    'network' => [
+        'resolve_ip' => env('ORCHESTRATE_RESOLVE_IP'),
+        'ca_bundle'  => env('ORCHESTRATE_CA_BUNDLE'),
+    ],
 ];

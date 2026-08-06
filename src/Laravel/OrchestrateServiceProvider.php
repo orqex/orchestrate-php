@@ -24,6 +24,7 @@ final class OrchestrateServiceProvider extends ServiceProvider
         $this->app->singleton(OrchestrateClient::class, static function (Application $app): OrchestrateClient {
             /** @var array<string, mixed> $config */
             $config = $app['config']['orchestrate'] ?? [];
+            $network = isset($config['network']) && is_array($config['network']) ? $config['network'] : [];
 
             return new OrchestrateClient([
                 'api_key'         => $config['secret_key'] ?? null,
@@ -31,6 +32,8 @@ final class OrchestrateServiceProvider extends ServiceProvider
                 'timeout'         => $config['timeout'] ?? 30.0,
                 'connect_timeout' => $config['connect_timeout'] ?? 10.0,
                 'max_retries'     => $config['max_retries'] ?? 2,
+                'resolve_ip'      => $network['resolve_ip'] ?? null,
+                'ca_bundle'       => $network['ca_bundle'] ?? null,
             ]);
         });
 

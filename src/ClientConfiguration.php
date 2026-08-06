@@ -27,6 +27,15 @@ use Orqex\Orchestrate\Http\GuzzleHttpClient;
  *       'http_client'     => $myGuzzleClientOrHttpClientInterface,
  *       'headers'         => ['X-Custom' => 'value'],
  *   ]);
+ *
+ * Custom DNS resolution and private CA trust can be configured when using
+ * the default transport:
+ *
+ *   new ClientConfiguration([
+ *       'api_key'    => 'sk_live_...',
+ *       'resolve_ip' => '192.0.2.10',
+ *       'ca_bundle'  => '/path/to/private-ca.pem',
+ *   ]);
  */
 final class ClientConfiguration
 {
@@ -72,7 +81,11 @@ final class ClientConfiguration
         $headers = isset($config['headers']) && is_array($config['headers']) ? $config['headers'] : [];
         $this->headers = $headers;
 
-        $this->httpClient = $this->resolveHttpClient($config['http_client'] ?? null);
+        $this->httpClient = $this->resolveHttpClient(
+            client: $config['http_client'] ?? null,
+            resolveIp: $this->optionalString($config, 'resolve_ip'),
+            caBundle: $this->optionalString($config, 'ca_bundle'),
+        );
     }
 
     /**
@@ -118,8 +131,20 @@ final class ClientConfiguration
         return $prefix . '_***' . substr($this->apiKey, -4);
     }
 
-    private function resolveHttpClient(mixed $client): HttpClientInterface
-    {
+    private function resolveHttpClient(
+        mixed $client,
+        #[\SensitiveParameter]
+        ?string $resolveIp,
+        #[\SensitiveParameter]
+        ?string $caBundle,
+    ): HttpClientInterface {
+        if ($client !== null && ($resolveIp !== null || $caBundle !== null)) {
+            throw new InvalidArgumentException(
+                'The "resolve_ip" and "ca_bundle" options cannot be combined with "http_client". '
+                . 'Configure network routing on the custom client instead.',
+            );
+        }
+
         if ($client instanceof HttpClientInterface) {
             return $client;
         }
@@ -129,12 +154,36 @@ final class ClientConfiguration
         }
 
         if ($client === null) {
-            return new GuzzleHttpClient();
+            return GuzzleHttpClient::fromNetworkConfiguration(
+                baseUri: $this->baseUri,
+                resolveIp: $resolveIp,
+                caBundle: $caBundle,
+            );
         }
 
         throw new InvalidArgumentException(
             'The "http_client" option must implement ' . HttpClientInterface::class
             . ' or ' . GuzzleClientInterface::class . '.',
         );
+    }
+
+    /**
+     * @param array<string, mixed> $config
+     */
+    private function optionalString(array $config, string $key): ?string
+    {
+        $value = $config[$key] ?? null;
+
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        if (! is_string($value)) {
+            throw new InvalidArgumentException("The \"{$key}\" option must be a string.");
+        }
+
+        $value = trim($value);
+
+        return $value !== '' ? $value : null;
     }
 }
