@@ -73,6 +73,22 @@ Orchestrate::paymentIntents()->all();
 
 See the [Laravel guide](https://docs.orqex.com/sdk/php/laravel).
 
+### Custom network routing
+
+Private deployments and split-network environments may route the public API
+hostname to a specific address while preserving the request Host header and TLS
+SNI. Laravel applications can configure this without changing application code:
+
+```dotenv
+ORCHESTRATE_BASE_URI=https://api.orqex.com/v1
+ORCHESTRATE_RESOLVE_IP=192.0.2.10
+ORCHESTRATE_CA_BUNDLE=/path/to/private-ca.pem
+```
+
+`ORCHESTRATE_RESOLVE_IP` is optional and requires the PHP cURL extension. The CA
+bundle is also optional; when omitted, the system trust store is used. TLS
+verification remains enabled whenever these routing options are used.
+
 ## Development
 
 ```bash

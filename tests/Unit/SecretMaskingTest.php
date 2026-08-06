@@ -58,4 +58,27 @@ final class SecretMaskingTest extends TestCase
 
         serialize(new ClientConfiguration(self::KEY));
     }
+
+    public function test_dumping_the_configuration_hides_private_network_details(): void
+    {
+        $caBundle = tempnam(sys_get_temp_dir(), 'orqex-ca-');
+        $this->assertNotFalse($caBundle);
+
+        try {
+            $config = new ClientConfiguration([
+                'api_key'    => self::KEY,
+                'resolve_ip' => '192.0.2.10',
+                'ca_bundle'  => $caBundle,
+            ]);
+
+            ob_start();
+            var_dump($config);
+            $dump = (string) ob_get_clean();
+
+            $this->assertStringNotContainsString('192.0.2.10', $dump);
+            $this->assertStringNotContainsString($caBundle, $dump);
+        } finally {
+            unlink($caBundle);
+        }
+    }
 }
