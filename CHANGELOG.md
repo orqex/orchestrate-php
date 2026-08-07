@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 While the SDK is on the `0.x` line, a breaking change bumps the minor version.
 
+## [0.3.0](https://github.com/orqex/orchestrate-php/compare/v0.2.0...v0.3.0) (2026-08-07)
+
+
+### Features
+
+* **http:** support custom network routing ([#4](https://github.com/orqex/orchestrate-php/issues/4)) ([1ff47e8](https://github.com/orqex/orchestrate-php/commit/1ff47e83f01abf27cd2e6466b42eb057c4ff7129))
+
 ## [0.2.0](https://github.com/orqex/orchestrate-php/compare/v0.1.1...v0.2.0) (2026-08-05)
 
 

@@ -9,7 +9,7 @@ namespace Orqex\Orchestrate;
  */
 final class Orchestrate
 {
-    public const VERSION = '0.2.0'; // x-release-please-version
+    public const VERSION = '0.3.0'; // x-release-please-version
 
     public const DEFAULT_BASE_URI = 'https://api.orqex.com/v1';
 
